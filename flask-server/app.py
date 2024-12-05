@@ -322,3 +322,4 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()  # This will create tables with the updated structure
     app.run(debug=True)
+
