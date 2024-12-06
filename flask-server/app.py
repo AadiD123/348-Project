@@ -58,14 +58,31 @@ with app.app_context():
 @app.route('/events', methods=['POST'])
 def create_event():
     data = request.get_json()
+    print(data)
     try:
+        # Parse date and time fields
+        event_date = datetime.strptime(data['event_date'], '%Y-%m-%d').date()
+
+        # Handle time parsing
+        start_time_str = data['start_time']
+        end_time_str = data['end_time']
+        
+        # Adjust time format if seconds are missing
+        if len(start_time_str) == 5:  # Format like '00:31'
+            start_time_str += ':00'  # Add seconds
+        if len(end_time_str) == 5:  # Format like '02:31'
+            end_time_str += ':00'  # Add seconds
+        
+        start_time = datetime.strptime(start_time_str, '%H:%M:%S').time()
+        end_time = datetime.strptime(end_time_str, '%H:%M:%S').time()
+
         new_event = Event(
             bar_id=data['bar_id'],
             title=data['title'],
             description=data.get('description', ''),
-            event_date=datetime.strptime(data['event_date'], '%Y-%m-%d').date(),
-            start_time=datetime.strptime(data['start_time'], '%H:%M:%S').time(),
-            end_time=datetime.strptime(data['end_time'], '%H:%M:%S').time(),
+            event_date=event_date,
+            start_time=start_time,
+            end_time=end_time,
             cover_charge=data.get('cover_charge', 0),
             age_requirement=data.get('age_requirement', 21),
             status=data.get('status', 'scheduled')
@@ -89,6 +106,7 @@ def create_event():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 400
+
 
 # READ: Get all bars
 @app.route('/bars', methods=['GET'])
@@ -158,7 +176,8 @@ def get_event(event_id):
             'cover_charge': float(event.cover_charge) if event.cover_charge else None,
             'age_requirement': event.age_requirement,
             'status': event.status,
-            'created_at': event.created_at.isoformat() if event.created_at else None
+            'created_at': event.created_at.isoformat() if event.created_at else None,
+            'category_id': event.categories[0].category_id if event.categories else None
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 400
